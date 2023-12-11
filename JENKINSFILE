@@ -1,52 +1,58 @@
-pipeline {
+pipeline{
     agent any
-
-     stages {
-        stage('Get Code') {
-            steps {
-                // Obtener código del repo
-                git 'https://github.com/anieto-unir/helloworld.git'
-            }
-        }
     
-        stage('Build') {
-           steps {
-              echo 'Eyyy, esto es Python. No hay que compilar nada!!!'
-	          echo WORKSPACE
-              bat 'dir'
-           }
+    stages{
+        stage('Get Code'){
+            steps{
+            
+            //obtener codigo del repo
+            git 'https://github.com/Cggtabares/UNIR-DevOPS-CP1.git'
+            
+            }
+                
         }
         
-        stage('Unit') {
-            steps {
-                catchError(buildResult: 'UNSTABLE', stageResult: 'FAILURE') {
-                    bat '''
-                        set PYTHONPATH=%WORKSPACE%
-                        pytest --junitxml=result-unit.xml test\\unit
-                    '''
-               }
-            }
-        }   
-
-
-        stage('Rest') {
-            steps {
-                bat '''
-                    set FLASK_APP=app\\api.py
-                    set FLASK_ENV=development
-                    start flask run
-                    start java -jar C:\\Unir\\Ejercicios\\wiremock\\wiremock-jre8-standalone-2.28.0.jar --port 9090 --root-dir C:\\Unir\\Ejercicios\\wiremock
-                    set PYTHONPATH=%WORKSPACE%
-                    pytest --junitxml=result-rest.xml test\\rest
-                '''
-            }    
-        }
-
-        stage('Results') {
-            steps {
-                junit 'result*.xml' 
+        stage('Build'){
+            steps{
+                echo 'Descargando codigo'
+                bat 'dir'
+                echo WORKSPACE
+                
             }
         }
-     
+        stage('Tests'){
+            parallel {
+                stage('Unit'){
+                    steps{
+                        catchError(buildResult: 'UNSTABLE', stageResult: 'Failure'){
+                            bat '''
+                                set PYTHONPATH=%WORKSPACE%
+                                pytest --junitxml=result-unit.xml test\\unit
+                            '''
+                        }
+                    }
+                }
+        
+                stage('Service'){
+                    steps{
+                        bat '''
+                            set FLASK_APP=app\\api.py
+                            set FLASK_ENV=development
+                            start flask run
+                            start java -jar C:\\Users\\DevOps-VM-UNIR\\Downloads\\wiremock-standalone-3.3.1.jar --port 9090 --root-dir C:\\Users\\DevOps-VM-UNIR\\AppData\\Local\\Jenkins\\.jenkins\\workspace\\CP1-test1\\test\\wiremock
+                            set PYTHONPATH=%WORKSPACE%
+                            pytest --junitxml=result-rest.xml test\\rest
+                            '''
+                    }
+                }
+            }
+        }
+        
+        stage('Results'){
+            steps{
+                junit 'result*.xml'
+            }
+        }
+        
     }
 }
