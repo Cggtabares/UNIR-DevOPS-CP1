@@ -1,1 +1,34 @@
 
+pipeline{
+    agent none
+    
+    stages{
+        stage('test-1'){
+            agent{ label 'windows'}
+            steps{
+                echo 'Windows 1'
+                bat 'hostname'
+                bat 'whoami'
+                echo WORKSPACE
+            }
+        }
+        stage('test-2'){
+            agent{ label 'linux'}
+            steps{
+                echo 'Windows 2'
+                bat 'hostname'
+                bat 'whoami'
+                echo WORKSPACE
+            }
+        }
+        stage('test-3'){
+            agent{ label 'windowsMain'}
+            steps{
+                echo 'Windows 3'
+                bat 'hostname'
+                bat 'whoami'
+                echo WORKSPACE
+            }
+        }
+    }
+}
