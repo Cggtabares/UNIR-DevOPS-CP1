@@ -9,6 +9,7 @@ pipeline{
                 echo 'Windows 1'
                 bat 'hostname'
                 bat 'whoami'
+                echo 'workspace'
                 echo WORKSPACE
             }
         }
@@ -18,6 +19,7 @@ pipeline{
                 echo 'Windows 2'
                 bat 'hostname'
                 bat 'whoami'
+                echo 'workspace'
                 echo WORKSPACE
             }
         }
@@ -27,6 +29,7 @@ pipeline{
                 echo 'Windows 3'
                 bat 'hostname'
                 bat 'whoami'
+                echo 'workspace'
                 echo WORKSPACE
             }
         }
