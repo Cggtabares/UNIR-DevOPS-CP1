@@ -12,14 +12,6 @@ pipeline{
                 
         }
         
-        stage('Build'){
-            steps{
-                echo 'Descargando codigo'
-                bat 'dir'
-                echo WORKSPACE
-                
-            }
-        }
         stage('Tests'){
             parallel {
                 stage('Unit'){
