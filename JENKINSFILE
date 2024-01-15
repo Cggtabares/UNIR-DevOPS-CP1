@@ -60,18 +60,20 @@ pipeline{
                     }
                 }
                 
+                
+                
+                stage('Coverage'){
+                    steps{
+                        cobertura coberturaReportFile: 'coverage.xml', onlyStable: false, failUnstable: false, conditionalCoverageTargets: '100,80,90', lineCoverageTargets: '100,85,95'
+                    }
+                }
+
                 stage('Performance'){
                     steps{
                         bat '''
                             C:\\Users\\DevOps-VM-UNIR\\Downloads\\apache-jmeter-5.6.3\\bin\\jmeter -n -t test\\jmeter\\flask.jmx -f -l flask.jtl
                         '''
                         perfReport sourceDataFiles: 'flask.jtl'
-                    }
-                }
-                
-                stage('Coverage'){
-                    steps{
-                        cobertura coberturaReportFile: 'coverage.xml', onlyStable: false, failUnstable: false, conditionalCoverageTargets: '100,80,90', lineCoverageTargets: '100,85,95'
                     }
                 }
 
