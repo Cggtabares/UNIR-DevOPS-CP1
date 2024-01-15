@@ -1,37 +1,128 @@
-
 pipeline{
     agent none
     
     stages{
-        stage('test-1'){
-            agent{ label 'windows'}
-            steps{
-                echo 'Windows 1'
-                bat 'hostname'
-                bat 'whoami'
-                echo 'workspace'
-                echo WORKSPACE
-            }
-        }
-        stage('test-2'){
-            agent{ label 'linux'}
-            steps{
-                echo 'Windows 2'
-                bat 'hostname'
-                bat 'whoami'
-                echo 'workspace'
-                echo WORKSPACE
-            }
-        }
-        stage('test-3'){
+        stage('Get-Code'){
             agent{ label 'windowsMain'}
             steps{
-                echo 'Windows 3'
+                echo 'Windows Main'
                 bat 'hostname'
                 bat 'whoami'
                 echo 'workspace'
                 echo WORKSPACE
+                //obtener codigo del repo
+                git branch: "master", url: 'https://github.com/Cggtabares/UNIR-DevOPS-CP1.git'
+                stash name:'code', includes:'**'
             }
         }
+        stage('Tests'){
+        parallel{
+            stage('Unit'){
+                agent{ label 'Windows-2'}
+                    steps{
+                        echo 'Windows 2'
+                        bat 'hostname'
+                        bat 'whoami'
+                        echo 'workspace'
+                        echo WORKSPACE
+                        catchError(buildResult: 'UNSTABLE', stageResult: 'Failure'){
+                            unstash name: 'code'
+                            bat '''
+                                set PYTHONPATH=%WORKSPACE%
+                                pytest --junitxml=result-unit.xml test\\unit
+                                coverage run --branch --source=app --omit=app\\__init__.py,app\\api.py -m pytest test\\unit
+                                coverage xml
+                            '''
+                            junit 'result*.xml'
+                            stash name:'unit-coverage', includes:'coverage.xml'
+                        }
+                    }
+                }
+            
+            stage('Rest'){
+                agent{ label 'windowsMain'}
+                    steps{
+                        echo 'Windows Main'
+                        bat 'hostname'
+                        bat 'whoami'
+                        echo 'workspace'
+                        echo WORKSPACE
+                        bat '''
+                            set FLASK_APP=app\\api.py
+                            set FLASK_ENV=development
+                            start flask run
+                           ping 127.0.0.1 -n 15
+                            start java -jar C:\\Users\\DevOps-VM-UNIR\\Downloads\\wiremock-standalone-3.3.1.jar --port 9090 --root-dir C:\\Users\\DevOps-VM-UNIR\\AppData\\Local\\Jenkins\\.jenkins\\workspace\\CP1-test1\\test\\wiremock
+                             ping 127.0.0.1 -n 15
+                            set PYTHONPATH=%WORKSPACE%
+                            pytest --junitxml=result-rest.xml test\\rest
+                            '''
+                    }
+                }
+                
+            stage('Static'){
+                agent{ label 'Windows-1'}
+                    steps{
+                        echo 'Windows 1'
+                        bat 'hostname'
+                        bat 'whoami'
+                        echo 'workspace'
+                        echo WORKSPACE
+                        unstash name: 'code'
+                        bat '''
+                            flake8 --format=pylint --exit-zero app>flake8.out
+                        '''
+                        recordIssues tools: [flake8(name: 'Flake8', pattern:'flake8.out')], qualityGates: [[threshold:8, type:'TOTAL', unstable: true],[threshold: 10, type: 'TOTAL', unstable:false]]
+                        
+                        
+                    }
+                    
+                }
+                
+                stage('Security'){
+                agent{ label 'windowsMain'}
+                        steps{
+                            echo 'Windows Main'
+                            bat 'hostname'
+                            bat 'whoami'
+                            echo 'workspace'
+                            echo WORKSPACE
+                            bat '''
+                                bandit --exit-zero -r . -f custom -o bandit.out --severity-level medium --msg-template "{abspath}:{line}:[{test_id}] {msg}"
+                            '''
+                            recordIssues tools: [pyLint(name: 'Bandit', pattern: 'bandit.out')], qualityGates: [[threshold: 2, type: 'TOTAL', unstable:true],[threshlod: 4, type: 'TOTAL', unstable: false]]
+                        }
+                    }
+            
+            stage('Coverage'){
+                agent{ label 'Windows-1'}
+                    steps{
+                        echo 'Windows 1'
+                        bat 'hostname'
+                        bat 'whoami'
+                        echo 'workspace'
+                        echo WORKSPACE
+                        unstash name:'unit-coverage'
+                        cobertura coberturaReportFile: 'coverage.xml', onlyStable: false, failUnstable: false, conditionalCoverageTargets: '100,80,90', lineCoverageTargets: '100,85,95'
+                    }
+                }
+                
+        }}
+
+        stage('Performance'){
+            agent{ label 'windowsMain'}
+                    steps{
+                        echo 'Windows Main'
+                        bat 'hostname'
+                        bat 'whoami'
+                        echo 'workspace'
+                        echo WORKSPACE
+                        bat '''
+                            C:\\Users\\DevOps-VM-UNIR\\Downloads\\apache-jmeter-5.6.3\\bin\\jmeter -n -t test\\jmeter\\flask.jmx -f -l flask.jtl
+                        '''
+                        perfReport sourceDataFiles: 'flask.jtl'
+                    }
+                }
+        
     }
 }
