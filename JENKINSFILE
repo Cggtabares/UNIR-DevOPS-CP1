@@ -6,45 +6,75 @@ pipeline{
             steps{
             
             //obtener codigo del repo
-            git 'https://github.com/Cggtabares/UNIR-DevOPS-CP1.git'
+            git branch: "master", url: 'https://github.com/Cggtabares/UNIR-DevOPS-CP1.git'
             
             }
                 
         }
         
-        stage('Tests'){
-            parallel {
                 stage('Unit'){
                     steps{
                         catchError(buildResult: 'UNSTABLE', stageResult: 'Failure'){
                             bat '''
                                 set PYTHONPATH=%WORKSPACE%
                                 pytest --junitxml=result-unit.xml test\\unit
+                                coverage run --branch --source=app --omit=app\\__init__.py,app\\api.py -m pytest test\\unit
+                                coverage xml
                             '''
+                            junit 'result*.xml'
                         }
                     }
                 }
         
-                stage('Service'){
+                stage('Rest'){
                     steps{
                         bat '''
                             set FLASK_APP=app\\api.py
                             set FLASK_ENV=development
                             start flask run
+                           ping 127.0.0.1 -n 15
                             start java -jar C:\\Users\\DevOps-VM-UNIR\\Downloads\\wiremock-standalone-3.3.1.jar --port 9090 --root-dir C:\\Users\\DevOps-VM-UNIR\\AppData\\Local\\Jenkins\\.jenkins\\workspace\\CP1-test1\\test\\wiremock
+                             ping 127.0.0.1 -n 15
                             set PYTHONPATH=%WORKSPACE%
                             pytest --junitxml=result-rest.xml test\\rest
                             '''
                     }
                 }
-            }
-        }
-        
-        stage('Results'){
-            steps{
-                junit 'result*.xml'
-            }
-        }
+                
+                stage('Static'){
+                    steps{
+                        bat '''
+                            flake8 --format=pylint --exit-zero app>flake8.out
+                        '''
+                        recordIssues tools: [flake8(name: 'Flake8', pattern:'flake8.out')], qualityGates: [[threshold:8, type:'TOTAL', unstable: true],[threshold: 10, type: 'TOTAL', unstable:false]]
+                    }
+                    
+                }
+                
+                stage('Security'){
+                    steps{
+                        bat '''
+                            bandit --exit-zero -r . -f custom -o bandit.out --severity-level medium --msg-template "{abspath}:{line}:[{test_id}] {msg}"
+                        '''
+                        recordIssues tools: [pyLint(name: 'Bandit', pattern: 'bandit.out')], qualityGates: [[threshold: 2, type: 'TOTAL', unstable:true],[threshlod: 4, type: 'TOTAL', unstable: false]]
+                    }
+                }
+                
+                stage('Performance'){
+                    steps{
+                        bat '''
+                            C:\\Users\\DevOps-VM-UNIR\\Downloads\\apache-jmeter-5.6.3\\bin\\jmeter -n -t test\\jmeter\\flask.jmx -f -l flask.jtl
+                        '''
+                        perfReport sourceDataFiles: 'flask.jtl'
+                    }
+                }
+                
+                stage('Coverage'){
+                    steps{
+                        cobertura coberturaReportFile: 'coverage.xml', onlyStable: false, failUnstable: false, conditionalCoverageTargets: '100,80,90', lineCoverageTargets: '100,85,95'
+                    }
+                }
+
         
     }
 }
