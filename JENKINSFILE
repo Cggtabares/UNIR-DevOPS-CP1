@@ -6,7 +6,7 @@ pipeline{
             steps{
             
             //obtener codigo del repo
-            git branch: "master", url: 'https://github.com/Cggtabares/UNIR-DevOPS-CP1.git'
+            git branch: "feature_fix_coverage", url: 'https://github.com/Cggtabares/UNIR-DevOPS-CP1.git'
             
             }
                 
