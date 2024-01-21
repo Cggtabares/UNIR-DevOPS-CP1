@@ -93,36 +93,37 @@ pipeline{
                             recordIssues tools: [pyLint(name: 'Bandit', pattern: 'bandit.out')], qualityGates: [[threshold: 2, type: 'TOTAL', unstable:true],[threshlod: 4, type: 'TOTAL', unstable: false]]
                         }
                     }
+
+                stage('Performance'){
+                            agent{ label 'windowsMain'}
+                                    steps{
+                                        echo 'Windows Main'
+                                        bat 'hostname'
+                                        bat 'whoami'
+                                        echo 'workspace'
+                                        echo WORKSPACE
+                                        bat '''
+                                            C:\\Users\\DevOps-VM-UNIR\\Downloads\\apache-jmeter-5.6.3\\bin\\jmeter -n -t test\\jmeter\\flask.jmx -f -l flask.jtl
+                                        '''
+                                        perfReport sourceDataFiles: 'flask.jtl'
+                                    }
+                                }
             
-            stage('Coverage'){
-                agent{ label 'Windows-1'}
-                    steps{
-                        echo 'Windows 1'
-                        bat 'hostname'
-                        bat 'whoami'
-                        echo 'workspace'
-                        echo WORKSPACE
-                        unstash name:'unit-coverage'
-                        cobertura coberturaReportFile: 'coverage.xml', onlyStable: false, failUnstable: false, conditionalCoverageTargets: '100,80,90', lineCoverageTargets: '100,85,95'
-                    }
-                }
                 
         }}
 
-        stage('Performance'){
-            agent{ label 'windowsMain'}
-                    steps{
-                        echo 'Windows Main'
-                        bat 'hostname'
-                        bat 'whoami'
-                        echo 'workspace'
-                        echo WORKSPACE
-                        bat '''
-                            C:\\Users\\DevOps-VM-UNIR\\Downloads\\apache-jmeter-5.6.3\\bin\\jmeter -n -t test\\jmeter\\flask.jmx -f -l flask.jtl
-                        '''
-                        perfReport sourceDataFiles: 'flask.jtl'
-                    }
-                }
+            stage('Coverage'){
+                            agent{ label 'Windows-1'}
+                                steps{
+                                    echo 'Windows 1'
+                                    bat 'hostname'
+                                    bat 'whoami'
+                                    echo 'workspace'
+                                    echo WORKSPACE
+                                    unstash name:'unit-coverage'
+                                    cobertura coberturaReportFile: 'coverage.xml', onlyStable: false, failUnstable: false, conditionalCoverageTargets: '100,80,90', lineCoverageTargets: '100,85,95'
+                                }
+                            }
         
     }
 }
