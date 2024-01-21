@@ -17,9 +17,7 @@ pipeline{
                         catchError(buildResult: 'UNSTABLE', stageResult: 'Failure'){
                             bat '''
                                 set PYTHONPATH=%WORKSPACE%
-                                pytest --junitxml=result-unit.xml test\\unit
-                                coverage run --branch --source=app --omit=app\\__init__.py,app\\api.py -m pytest test\\unit
-                                coverage xml
+                                coverage run --branch --source=app --omit=app\\__init__.py,app\\api.py -m pytest --junitxml=result-unit.xml test\\unit
                             '''
                             junit 'result*.xml'
                         }
@@ -32,9 +30,9 @@ pipeline{
                             set FLASK_APP=app\\api.py
                             set FLASK_ENV=development
                             start flask run
-                           ping 127.0.0.1 -n 15
+                            ping 127.0.0.1 -n 15
                             start java -jar C:\\Users\\DevOps-VM-UNIR\\Downloads\\wiremock-standalone-3.3.1.jar --port 9090 --root-dir C:\\Users\\DevOps-VM-UNIR\\AppData\\Local\\Jenkins\\.jenkins\\workspace\\CP1-test1\\test\\wiremock
-                             ping 127.0.0.1 -n 15
+                            ping 127.0.0.1 -n 15
                             set PYTHONPATH=%WORKSPACE%
                             pytest --junitxml=result-rest.xml test\\rest
                             '''
@@ -64,6 +62,9 @@ pipeline{
                 
                 stage('Coverage'){
                     steps{
+                        bat '''
+                            coverage xml
+                        '''
                         cobertura coberturaReportFile: 'coverage.xml', onlyStable: false, failUnstable: false, conditionalCoverageTargets: '100,80,90', lineCoverageTargets: '100,85,95'
                     }
                 }
@@ -71,6 +72,10 @@ pipeline{
                 stage('Performance'){
                     steps{
                         bat '''
+                            set FLASK_APP=app\\api.py
+                            set FLASK_ENV=development
+                            start flask run
+                            ping 127.0.0.1 -n 15
                             C:\\Users\\DevOps-VM-UNIR\\Downloads\\apache-jmeter-5.6.3\\bin\\jmeter -n -t test\\jmeter\\flask.jmx -f -l flask.jtl
                         '''
                         perfReport sourceDataFiles: 'flask.jtl'
